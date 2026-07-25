@@ -1,63 +1,56 @@
-#  Mission Control (APEX AERO)
+Mission Control
 
-> *Every mission starts with a countdown. Every decision changes the outcome.*
+Mission Control is a browser-based space mission operations platform inspired by modern aerospace control centers. Designed as an interactive engineering experience rather than a game, the application allows users to explore satellite operations, orbital mechanics, spacecraft telemetry, and mission planning through an immersive interface and real-time 3D visualization.
 
-Mission Control is a realistic, browser-based spaceflight planning, telemetry monitoring, and orbital mechanics simulation platform. Users take on the role of Flight Director, managing spacecraft staging parameters, trajectory physics, system readiness checks, and celestial exploration.
+The project combines engineering-inspired dashboards with modern web technologies to create a professional mission control environment where users can monitor spacecraft health, visualize orbital trajectories, and interact with key mission systems. The interface emphasizes clarity, smooth animations, and an intuitive workflow while showcasing the possibilities of browser-based simulation and visualization.
 
----
+### Live Demo
 
-##  Key Features
+https://thunderous-stardust-d4cc3a.netlify.app/
 
-* **Control Center Dashboard**: Real-time telemetry monitoring, DSN communication tracking, solar wind status, and live spacecraft count.
-* **Flight Planner**: Calculate target orbits, Hohmann transfer delta-v requirements, and vehicle lift capability checks.
-* **Staged Rocket Designer**: 3D interactive assembly interface supporting modular solid boosters, fuel tank sizing, vacuum/ascent engines, and deployable solar arrays.
-* **Launch Sequence Pad**: Pre-flight system checkouts, real-time meteorological GO/NO-GO checks, and active liftoff ignition countdowns.
-* **Orbital Telemetry HUD**: Interactive 3D orbital trajectory visualizer utilizing Newtonian step-physics (Euler-Cromer integration) for real-time speed, altitude, and drag telemetry plots.
-* **Celestial Database**: Solar System database modeling planet radius, gravity, escape velocity, and rotational periods.
-* **Training Academy & Logbooks**: Space flight school tutorials with instant quiz verifications and JSON telemetry log exporters.
-* **AI Flight Assistant**: An integrated LLM-style helper utility to check launchpad TWR, analyze flight anomalies, and review vehicle specs.
+### Features
 
----
+* Interactive 3D Earth and spacecraft visualization
+* Orbital mechanics simulation and trajectory rendering
+* Mission dashboard with real-time spacecraft telemetry
+* System health monitoring and mission status indicators
+* Communication and mission operations panels
+* Responsive glassmorphism interface with custom animations
+* Smooth camera controls, transitions, and interactive UI
+* Modular architecture for future mission and spacecraft expansion
 
-##Flat  Directory Structure
+### Technology Stack
 
-This project uses a clean, **folderless structure** consisting of exactly 8 files at the root level:
+* React
+* Vite
+* JavaScript (ES6)
+* HTML5
+* CSS3
+* Three.js
+* WebGL
+* Custom orbital mechanics engine
 
-1. `App.jsx` - Core React views, state context providers, 3D canvases, and entry node.
-2. `rocketPhysics.js` - Staging mass solvers, atmospheric density models, and Euler integration steps.
-3. `orbitalMechanics.js` - Keplerian orbits, Hohmann transfer calculations, and planetary database.
-4. `index.html` - HTML5 template including inline rocket SVG favicon.
-5. `index.css` - Custom sci-fi dark tactical aerospace HUD styling.
-6. `package.json` - Dependencies configuration (Vite, React 19, Three.js 0.160.0).
-7. `vite.config.js` - Build compiler parameter options.
-8. `README.md` - Documentation file.
+### Project Structure
 
----
+* `App.jsx` – Main application and UI layout
+* `index.css` – Global styling and design system
+* `index.html` – Application entry point
+* `orbitalMechanics.js` – Orbital calculations and visualization logic
+* `rocketPhysics.js` – Spacecraft motion and physics calculations
+* `vite.config.js` – Vite configuration
+* `package.json` – Project dependencies and scripts
 
-## Getting Started
+### Running Locally
 
-To run the application locally on your computer:
+Clone the repository, install the dependencies, and start the development server.
 
 ```bash
-# 1. Navigate to the project directory
-cd ~/Desktop/mission-control
-
-# 2. Install package dependencies
 npm install
-
-# 3. Start the Vite hot-reloading development server
 npm run dev
 ```
 
-Open `http://localhost:5173` in your browser to fly your missions!
+### Future Improvements
 
----
+Future versions may include support for multiple spacecraft, live public satellite data, mission planning tools, ground station visualization, orbital maneuver planning, and expanded telemetry systems to create an even more realistic mission operations experience.
 
-##  Production Build
-
-To compile a minified production bundle:
-
-```bash
-npm run build
-```
-This generates a fast, optimized build inside a `./dist` folder.
+Mission Control was built as an educational and engineering-focused project that demonstrates how modern browser technologies can be used to create immersive scientific visualization and simulation software.
