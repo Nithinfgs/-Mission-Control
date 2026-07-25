@@ -1,4 +1,4 @@
-# 🚀 Mission Control (APEX AERO)
+#  Mission Control (APEX AERO)
 
 > *Every mission starts with a countdown. Every decision changes the outcome.*
 
@@ -6,7 +6,7 @@ Mission Control is a realistic, browser-based spaceflight planning, telemetry mo
 
 ---
 
-## 🌟 Key Features
+##  Key Features
 
 * **Control Center Dashboard**: Real-time telemetry monitoring, DSN communication tracking, solar wind status, and live spacecraft count.
 * **Flight Planner**: Calculate target orbits, Hohmann transfer delta-v requirements, and vehicle lift capability checks.
@@ -19,7 +19,7 @@ Mission Control is a realistic, browser-based spaceflight planning, telemetry mo
 
 ---
 
-## 📂 Flat Directory Structure
+##Flat  Directory Structure
 
 This project uses a clean, **folderless structure** consisting of exactly 8 files at the root level:
 
@@ -34,7 +34,7 @@ This project uses a clean, **folderless structure** consisting of exactly 8 file
 
 ---
 
-## ⚙️ Getting Started
+## Getting Started
 
 To run the application locally on your computer:
 
@@ -53,7 +53,7 @@ Open `http://localhost:5173` in your browser to fly your missions!
 
 ---
 
-## 🛠️ Production Build
+##  Production Build
 
 To compile a minified production bundle:
 
