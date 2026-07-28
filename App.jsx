@@ -404,6 +404,24 @@ export function MissionProvider({ children }) {
   const simulationRef = useRef(null);
   const flightStateRef = useRef(flightState);
   flightStateRef.current = flightState;
+
+  // Refs to hold the latest simulation state for the interval-based physics loop.
+  // React 18 batches setState calls, so nested updaters can't pass values between
+  // closures. Instead we read from refs and write via wrapped setters.
+  const positionRef = useRef(position);
+  const velocityRef = useRef(velocity);
+  const stageFuelsRef = useRef(stageFuels);
+  const pitchRef = useRef(pitch);
+  const throttleRef = useRef(throttle);
+  const flightTimeRef = useRef(flightTime);
+
+  const updatePosition = (val) => { positionRef.current = val; setPosition(val); };
+  const updateVelocity = (val) => { velocityRef.current = val; setVelocity(val); };
+  const updateStageFuels = (val) => { stageFuelsRef.current = val; setStageFuels(val); };
+  const updateFlightTime = (val) => { flightTimeRef.current = val; setFlightTime(val); };
+  const updatePitch = (val) => { pitchRef.current = val; setPitch(val); };
+  const updateThrottle = (val) => { throttleRef.current = val; setThrottle(val); };
+
   const rocketStats = calculateRocketStats(rocketStages);
 
   const rollWeather = () => {
@@ -421,11 +439,11 @@ export function MissionProvider({ children }) {
   const resetLaunch = () => {
     setFlightState('prelaunch');
     setCountdown(10);
-    setFlightTime(0);
-    setPosition({ x: 0, y: EARTH.RADIUS });
-    setVelocity({ vx: 0, vy: 0 });
-    setPitch(0);
-    setThrottle(0);
+    updateFlightTime(0);
+    updatePosition({ x: 0, y: EARTH.RADIUS });
+    updateVelocity({ vx: 0, vy: 0 });
+    updatePitch(0);
+    updateThrottle(0);
     setSolarDeployed(false);
     setFairingSeparated(false);
     setTelemetryHistory([]);
@@ -433,7 +451,7 @@ export function MissionProvider({ children }) {
     setMaxQ(0);
     setMaxQTime(0);
     setChecklist(INITIAL_CHECKLIST.map(item => ({ ...item, status: 'PENDING' })));
-    setStageFuels(rocketStats.stageSpecs.map(s => s.fuelMass));
+    updateStageFuels(rocketStats.stageSpecs.map(s => s.fuelMass));
     setActiveStage(rocketStages.length - 1);
   };
 
@@ -485,7 +503,7 @@ export function MissionProvider({ children }) {
           if (prev <= 1) {
             clearInterval(timer);
             setFlightState('ignited');
-            setThrottle(100);
+            updateThrottle(100);
             addTimelineEvent('T-0.0s: Engine Ignition');
             setTimeout(() => {
               setFlightState('flight');
@@ -516,82 +534,79 @@ export function MissionProvider({ children }) {
       simulationRef.current = setInterval(() => {
         const simDt = dt * timeWarp;
 
-        setFlightTime(prevTime => {
-          const nextTime = prevTime + simDt;
-          setStageFuels(prevFuels => {
-            setPosition(prevPos => {
-              setVelocity(prevVel => {
-                setThrottle(prevThrottle => {
-                  setPitch(prevPitch => {
-                    const specs = rocketStats.stageSpecs;
-                    const activeSpec = specs[activeStage];
-                    let activeFuel = prevFuels[activeStage] || 0;
-                    let thrust = 0;
-                    let burnDurationRate = 0;
-                    
-                    if (activeFuel > 0 && prevThrottle > 0 && activeSpec && activeSpec.thrust > 0) {
-                      thrust = activeSpec.thrust * (prevThrottle / 100);
-                      burnDurationRate = thrust / (activeSpec.ispVac * 9.80665);
-                    }
+        // Read latest values from refs (avoids nested-setState batching issues)
+        const prevPos = positionRef.current;
+        const prevVel = velocityRef.current;
+        const prevFuels = stageFuelsRef.current;
+        const prevPitchVal = pitchRef.current;
+        const prevThrottleVal = throttleRef.current;
+        const prevTime = flightTimeRef.current;
 
-                    const nextFuels = [...prevFuels];
-                    if (burnDurationRate > 0) {
-                      nextFuels[activeStage] = Math.max(0, activeFuel - burnDurationRate * simDt);
-                    }
+        const nextTime = prevTime + simDt;
 
-                    let currentMass = rocketStats.dryMass;
-                    nextFuels.forEach(f => { currentMass += f; });
+        const specs = rocketStats.stageSpecs;
+        const activeSpec = specs[activeStage];
+        let activeFuel = prevFuels[activeStage] || 0;
+        let thrust = 0;
+        let burnDurationRate = 0;
 
-                    const sim = stepPhysics(prevPos, prevVel, currentMass, thrust, prevPitch, simDt);
+        if (activeFuel > 0 && prevThrottleVal > 0 && activeSpec && activeSpec.thrust > 0) {
+          thrust = activeSpec.thrust * (prevThrottleVal / 100);
+          burnDurationRate = thrust / (activeSpec.ispVac * 9.80665);
+        }
 
-                    if (sim.crashed) {
-                      setFlightState('crashed');
-                      addTimelineEvent(`T+${nextTime.toFixed(1)}s: CRITICAL ANOMALY: IMPACT DETECTED.`);
-                      setLogs(prev => [{
-                        id: `launch-${Date.now()}`,
-                        name: `Mission ${logs.length + 1}`,
-                        date: new Date().toISOString().split('T')[0],
-                        status: 'FAILED',
-                        duration: `${nextTime.toFixed(0)}s`,
-                        score: 5,
-                        notes: `Telemetry terminated at altitude: ${(sim.altitude / 1000).toFixed(2)}km.`
-                      }, ...prev]);
-                      clearInterval(simulationRef.current);
-                      return prevVel;
-                    }
+        const nextFuels = [...prevFuels];
+        if (burnDurationRate > 0) {
+          nextFuels[activeStage] = Math.max(0, activeFuel - burnDurationRate * simDt);
+        }
 
-                    if (sim.q > maxQ) setMaxQ(sim.q);
+        let currentMass = rocketStats.dryMass;
+        nextFuels.forEach(f => { currentMass += f; });
 
-                    if (sim.orbitAchieved && flightStateRef.current !== 'orbit') {
-                      setFlightState('orbit');
-                      addTimelineEvent(`T+${nextTime.toFixed(1)}s: Stable orbit achieved!`);
-                      setLogs(prev => [{
-                        id: `launch-${Date.now()}`,
-                        name: `Mission ${logs.length + 1}`,
-                        date: new Date().toISOString().split('T')[0],
-                        status: 'SUCCESS',
-                        duration: `${nextTime.toFixed(0)}s`,
-                        score: 95,
-                        notes: `Stable orbit inserted.`
-                      }, ...prev]);
-                    }
+        const sim = stepPhysics(prevPos, prevVel, currentMass, thrust, prevPitchVal, simDt);
 
-                    setTelemetryHistory(hist => {
-                      const sample = { time: nextTime, altitude: sim.altitude, speed: sim.speed, q: sim.q, vx: sim.vel.vx, vy: sim.vel.vy };
-                      return hist.length > 150 ? [...hist.slice(1), sample] : [...hist, sample];
-                    });
+        // Update all simulation state
+        updateFlightTime(nextTime);
+        updateStageFuels(nextFuels);
+        updatePosition(sim.pos);
+        updateVelocity(sim.vel);
 
-                    return sim.vel;
-                  });
-                  return prevThrottle;
-                });
-                return prevVel;
-              });
-              return prevPos;
-            });
-            return nextFuels;
-          });
-          return nextTime;
+        if (sim.crashed) {
+          setFlightState('crashed');
+          addTimelineEvent(`T+${nextTime.toFixed(1)}s: CRITICAL ANOMALY: IMPACT DETECTED.`);
+          setLogs(prev => [{
+            id: `launch-${Date.now()}`,
+            name: `Mission ${logs.length + 1}`,
+            date: new Date().toISOString().split('T')[0],
+            status: 'FAILED',
+            duration: `${nextTime.toFixed(0)}s`,
+            score: 5,
+            notes: `Telemetry terminated at altitude: ${(sim.altitude / 1000).toFixed(2)}km.`
+          }, ...prev]);
+          clearInterval(simulationRef.current);
+          simulationRef.current = null;
+          return;
+        }
+
+        if (sim.q > maxQ) setMaxQ(sim.q);
+
+        if (sim.orbitAchieved && flightStateRef.current !== 'orbit') {
+          setFlightState('orbit');
+          addTimelineEvent(`T+${nextTime.toFixed(1)}s: Stable orbit achieved!`);
+          setLogs(prev => [{
+            id: `launch-${Date.now()}`,
+            name: `Mission ${logs.length + 1}`,
+            date: new Date().toISOString().split('T')[0],
+            status: 'SUCCESS',
+            duration: `${nextTime.toFixed(0)}s`,
+            score: 95,
+            notes: `Stable orbit inserted.`
+          }, ...prev]);
+        }
+
+        setTelemetryHistory(hist => {
+          const sample = { time: nextTime, altitude: sim.altitude, speed: sim.speed, q: sim.q, vx: sim.vel.vx, vy: sim.vel.vy };
+          return hist.length > 150 ? [...hist.slice(1), sample] : [...hist, sample];
         });
       }, intervalMs);
     }
@@ -621,7 +636,7 @@ export function MissionProvider({ children }) {
     <MissionContext.Provider value={{
       activeTab, setActiveTab, rocketStages, setRocketStages, rocketStats, activeMissions, setActiveMissions, logs, setLogs,
       weather, rollWeather, checklist, runChecklistTest, runAllChecklists, flightState, setFlightState, countdown, timeWarp, setTimeWarp,
-      flightTime, position, setPosition, velocity, setVelocity, pitch, setPitch, throttle, setThrottle, activeStage, stageFuels, setStageFuels,
+      flightTime, position, setPosition: updatePosition, velocity, setVelocity: updateVelocity, pitch, setPitch: updatePitch, throttle, setThrottle: updateThrottle, activeStage, stageFuels, setStageFuels: updateStageFuels,
       solarDeployed, deploySolarPanels, fairingSeparated, separateFairing, telemetryHistory, flightTimeline, maxQ, maxQTime,
       performStageSeparation, resetLaunch, startLaunchSequence, deployPayloadToOrbit, solarActivity, dsnStatus, settings, setSettings
     }}>
